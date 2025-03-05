@@ -1,0 +1,26 @@
+﻿markdown:
+  modules:
+    video:
+      url: https://cdn.jsdelivr.net/npm/markdown-it-video@0.6.3/index.min.js
+  settings:
+    html: true
+
+print:
+  html: true
+  docx: true
+  pdf: true
+
+pdf:
+  format: 'A4'
+
+style: gost.css
+replacements:
+  - regex: <pre>\s*<code(?<prop>.*?)>(?<code>[\w\W]*?)<\/code>\s*<\/pre>
+    string: |
+      <table class="code">
+        <tr class="code">
+          <td class="code">
+            <pre><code$<prop>>$<code></code></pre>
+          </td>
+        </tr>
+      </table>

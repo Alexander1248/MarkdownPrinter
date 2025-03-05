@@ -1,0 +1,22 @@
+{
+  "name": "markdown-to-pdf",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js -c=config.yaml"
+  },
+  "keywords": [],
+  "author": "Alexander1248",
+  "license": "ISC",
+  "description": "Markdown to PDF renderer with modularity and style support",
+  "type": "module",
+  "dependencies": {
+    "args": "^5.0.3",
+    "html-docx-js": "^0.3.1",
+    "html-pdf-node": "^1.0.8",
+    "markdown-it": "^14.1.0",
+    "require-from-web": "^1.2.0",
+    "sync-fetch": "^0.6.0-2",
+    "yaml": "^2.7.0"
+  }
+}

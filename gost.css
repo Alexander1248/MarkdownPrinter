@@ -1,0 +1,22 @@
+﻿p {
+    font-size: 14pt;
+}
+h1 {
+    font-size: 20pt;
+    text-align: center;
+}
+h2 {
+    font-size: 18pt;
+    text-align: center;
+}
+h3 {
+    font-size: 16pt;
+}
+img {
+    width: 100px;
+    height: auto;
+}
+
+table, tr, td, th {
+    border: 1px solid black;
+}
