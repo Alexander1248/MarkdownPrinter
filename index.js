@@ -8,6 +8,7 @@ import { dirname } from 'path';
 import md from "./md.js";
 import docx from "./docx.js";
 import pdf from "./pdf.js";
+import fetch from "sync-fetch";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,7 +26,15 @@ if ("config" in data)
     config = YAML.parse(fs.readFileSync(data.config, "utf-8"));
 else config = {};
 log("CONFIG", config)
-config.style = fs.readFileSync(config.style, "utf-8").substring(1);
+config.style = "";
+for (let i in config.styles) {
+    let url = config.styles[i];
+    let data;
+    if (fs.existsSync(url))
+        data = fs.readFileSync(url,'utf-8').substring(1);
+    else data = fetch(url).text();
+    config.style += `${data}\n`;
+}
 
 // Init render engines
 const print = config.print ?? { html: false, docx: false, pdf: true };

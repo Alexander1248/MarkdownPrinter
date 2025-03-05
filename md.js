@@ -3,7 +3,9 @@ import fs from "fs";
 import fetch from "sync-fetch";
 import requireFromUrl from "require-from-web";
 
-const regex = /<img(?<before>.*)src="(?<url>(?!data:image\/.+;base64,).+?)"(?<after>.*?)>/g;
+const imgRegex = /<img(?<before>.*)src="(?<url>(?!data:image\/.+;base64,).+?)"(?<after>.*?)\/>/g;
+const doctypeRegex = /<!DOCTYPE.+?>/g
+
 
 const exports = {};
 let md = markdownIt()
@@ -24,16 +26,26 @@ exports.init = async (config) => {
 exports.inject = () => loader;
 
 exports.render = (text) => {
-    return md.render(text).replaceAll(regex, replaceToBase64Images);
+    return md.render(text).replaceAll(imgRegex, replaceToBase64Images);
 }
 
 function replaceToBase64Images(match, before, url, after){
-    let format = url.substring(url.lastIndexOf('.') + 1, url.length);
-    if (format === 'jpg') format = 'jpeg';
-    let data;
-    if (fs.existsSync(url))
-        data = fs.readFileSync(url,'latin1');
-    else data = Buffer.from(fetch(url).arrayBuffer()).toString('latin1');
+    let data, format;
+    if (fs.existsSync(url)) {
+        format = url.substring(url.lastIndexOf('.') + 1, url.length);
+        if (format === 'jpg') format = 'jpeg';
+        data = fs.readFileSync(url, 'latin1');
+    }
+    else {
+        let response = fetch(url);
+        let type = response.headers.get('content-type');
+        if (!type.startsWith('image')) return '';
+        type = type.substring(6);
+        format = type;
+        if (type === 'svg+xml')
+            return response.text().replaceAll(doctypeRegex, '');
+        data = Buffer.from(response.arrayBuffer()).toString('latin1');
+    }
     return `<img${before}src="data:image/${format};base64,${btoa(data)}"${after}/>`;
 }
 

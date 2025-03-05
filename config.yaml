@@ -1,7 +1,7 @@
 ﻿markdown:
   modules:
-    video:
-      url: https://cdn.jsdelivr.net/npm/markdown-it-video@0.6.3/index.min.js
+    latex:
+      url: https://cdn.jsdelivr.net/npm/markdown-it-latex2img@0.0.6/dist/markdown-it-latex2img.min.js
   settings:
     html: true
 
@@ -13,7 +13,9 @@ print:
 pdf:
   format: 'A4'
 
-style: gost.css
+styles:
+  - gost.css
+
 replacements:
   - regex: <pre>\s*<code(?<prop>.*?)>(?<code>[\w\W]*?)<\/code>\s*<\/pre>
     string: |
