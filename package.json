@@ -1,5 +1,5 @@
 {
-  "name": "markdown-to-pdf",
+  "name": "markdown-printer",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
