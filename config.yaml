@@ -7,11 +7,15 @@
 
 print:
   html: true
-  docx: true
   pdf: true
 
 pdf:
   format: 'A4'
+  margin:
+    top: "2 cm"
+    bottom: "2 cm"
+    left: "3 cm"
+    right: "1.5 cm"
 
 styles:
   - gost.css
