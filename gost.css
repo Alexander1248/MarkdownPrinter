@@ -1,22 +1,115 @@
-﻿p {
+﻿/* Общие требования ГОСТ */
+body {
+    font-family: "Times New Roman", Times, serif;
     font-size: 14pt;
+    line-height: 1.5;
+    text-align: justify;
+    counter-reset: table 1 fig 0;
 }
+
+p {
+    font-size: 14pt;
+    margin: 0 0 12pt 0;
+    text-indent: 1.25cm; /* абзацный отступ по ГОСТ */
+}
+
+/* Заголовки */
 h1 {
     font-size: 20pt;
     text-align: center;
+    font-weight: bold;
+    margin: 24pt 0 12pt 0;
 }
 h2 {
     font-size: 18pt;
     text-align: center;
+    font-weight: bold;
+    margin: 18pt 0 12pt 0;
 }
 h3 {
     font-size: 16pt;
-}
-img {
-    width: 100px;
-    height: auto;
+    font-weight: bold;
+    margin: 12pt 0 12pt 0;
 }
 
+/* Таблицы */
+table {
+    border-collapse: collapse;
+    margin: 12pt auto;
+    font-size: 12pt;
+    width: 100%;
+    counter-increment: table;
+}
 table, tr, td, th {
     border: 1px solid black;
+}
+td, th {
+    padding: 4pt 6pt;
+}
+caption {
+    caption-side: bottom;
+    text-align: center;
+    font-size: 12pt;
+    margin-top: 6pt;
+}
+caption::before {
+    content: "Таблица " counter(table) " — ";
+}
+
+/* Рисунки и диаграммы */
+img, .mermaid-container {
+    display: block;
+    margin: 12pt auto;
+    max-width: 90%;
+    height: auto;
+    text-align: center;
+    counter-increment: fig;
+}
+.figure-caption {
+    text-align: center;
+    font-size: 12pt;
+    margin-top: 6pt;
+}
+.figure-caption::before {
+    content: "Рисунок " counter(fig) " — ";
+}
+.table-caption {
+    font-size: 10pt;
+    margin-top: 6pt;
+}
+.table-caption::before {
+    content: "Таблица " counter(table) " — ";
+}
+
+.centered {
+    display: flex;
+    flex-direction: column;   /* чтобы диаграмма и подпись шли вертикально */
+    align-items: center;      /* горизонтальное выравнивание */
+    justify-content: center;  /* вертикальное, если контейнер имеет высоту */
+    text-align: center;       /* для подписи */
+    margin: 0 auto;           /* центрирование, если фиксированная ширина */
+}
+
+/* Принт и разрывы страниц */
+@media print {
+    @page {
+        margin: 2cm 1.5cm 2cm 3cm;
+        size: A4 portrait;   /* ориентация и размер страницы */
+    }
+    .page-break {
+        break-after: page;
+    }
+    .mermaid-container {
+        display: inline-block;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .avoid-page-break {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    table {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
 }

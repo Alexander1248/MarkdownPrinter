@@ -2,114 +2,158 @@ import args from "args";
 import fs from "fs";
 import fsp from "fs/promises";
 import YAML from "yaml";
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+import fetch from "node-fetch"; // асинхронный fetch
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
 
-import md from "./md.js";
-import docx from "./docx.js";
-import pdf from "./pdf.js";
-import fetch from "sync-fetch";
+import { MarkdownRenderer } from "./md.js";
+import * as docx from "./docx.js";
+import * as pdf from "./pdf.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ------------------------
+// Parse CLI arguments
+// ------------------------
 args
-    .option('input', 'Input file', "(?<name>.*)\.md")
-    .option('output', 'Output file', "{{name}}")
-    .option('config', 'Config document')
+    .option("input", "Input file", "(?<name>.*)\\.md")
+    .option("output", "Output file", "{{name}}")
+    .option("config", "Config document");
 
-const data = args.parse(process.argv)
+const cliData = args.parse(process.argv);
 
+// ------------------------
 // Load config
-let config;
-if ("config" in data)
-    config = YAML.parse(fs.readFileSync(data.config, "utf-8"));
-else config = {};
-log("CONFIG", config)
-config.style = "";
-for (let i in config.styles) {
-    let url = config.styles[i];
-    let data;
-    if (fs.existsSync(url))
-        data = fs.readFileSync(url,'utf-8').substring(1);
-    else data = fetch(url).text();
-    config.style += `${data}\n`;
+// ------------------------
+let config = {};
+if (cliData.config) {
+    const configContent = await fsp.readFile(cliData.config, "utf-8");
+    config = YAML.parse(configContent);
 }
 
+log("CONFIG", config);
+
+config.style = "";
+
+if (config.styles) {
+    config.style += `<style>\n`;
+    for (const url of config.styles) {
+        let data;
+        if (fs.existsSync(url)) {
+            data = (await fsp.readFile(url, "utf-8")).substring(1);
+        } else {
+            const res = await fetch(url);
+            data = await res.text();
+        }
+        config.style += `${data}\n`;
+        // config.style += `<link rel="stylesheet" href="${url}">\n`
+    }
+    config.style += `</style>`;
+}
+
+// ------------------------
 // Init render engines
-const print = config.print ?? { html: false, docx: false, pdf: true };
-await md.init(config);
-if (print.docx == true) docx.init(config);
-if (print.pdf == true) pdf.init(config);
+// ------------------------
+const printConfig = config.print ?? { html: false, docx: false, pdf: true };
+const md = new MarkdownRenderer();
+await md.init(config, error);
 
+if (printConfig.docx) await docx.init(config);
+if (printConfig.pdf) await pdf.init(config);
+
+// ------------------------
 // Render documents
+// ------------------------
+async function processDirectory(dirPath) {
+    const files = await fsp.readdir(dirPath);
 
-fsp.readdir(__dirname).then(files => {
-    files.forEach(fileIn => {
-        let match = fileIn.match(data.input);
-        if (!match) return;
-        let fileOut = data.output;
-        for (let key in match.groups)
-            fileOut = fileOut.replace(`{{${key}}}`, match.groups[key]);
-        markdownToFiles(fileIn, fileOut, config.style);
-    })
-}).catch(err => error("DIR", err));
+    for (const fileIn of files) {
+        const match = fileIn.match(cliData.input);
+        if (!match) continue;
 
+        let fileOut = cliData.output;
+        if (match.groups) {
+            for (const key in match.groups) {
+                fileOut = fileOut.replace(`{{${key}}}`, match.groups[key]);
+            }
+        }
 
-function markdownToFiles(fileIn, fileOut, style) {
-    fsp.readFile(fileIn, "utf-8").then(async data => {
-        let html = md.render(data.toString())
-        html = applyReplacements(html);
+        await markdownToFiles(resolve(dirPath, fileIn), fileOut, config.style);
+    }
+}
+
+await processDirectory(__dirname);
+
+// ------------------------
+// Markdown -> Files
+// ------------------------
+async function markdownToFiles(fileIn, fileOut, style) {
+    try {
+        const rawData = await fsp.readFile(fileIn, "utf-8");
+        let html = await md.render(rawData.toString());
+        html = applyReplacements(html, config.replacements);
+
         html = `<!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <title>${fileIn}</title>
-        </head>
-        <body>
-            ${md.inject()}
-            <style>${style}</style>
-            ${html}
-        </body>
-        </html>`;
-        if (print.html == true) {
-            fsp.writeFile(`${fileOut}.html`, html)
-                .catch(err => error("SAVE_HTML", err));
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${fileIn}</title>
+${style}
+</head>
+<body>
+<script>window.wait = 0</script>
+${md.inject()}
+${html}
+</body>
+</html>`;
+
+        if (printConfig.html) {
+            await fsp.writeFile(`${fileOut}.html`, html);
             log("RENDER_HTML", `Render ${fileIn} to ${fileOut}.html`);
         }
-        if (print.docx == true) {
+
+        if (printConfig.docx) {
             const blob = await docx.render(html).arrayBuffer();
-            fsp.writeFile(`${fileOut}.docx`, Buffer.from(blob))
-                .catch(err => error("SAVE_DOCX", err));
+            await fsp.writeFile(`${fileOut}.docx`, Buffer.from(blob));
             log("RENDER_DOCX", `Render ${fileIn} to ${fileOut}.docx`);
         }
 
-        if (print.pdf == true) {
+        if (printConfig.pdf) {
             const blob = await pdf.render(html);
-            fsp.writeFile(`${fileOut}.pdf`, blob)
-                .catch(err => error("SAVE_PDF", err));
+            await fsp.writeFile(`${fileOut}.pdf`, blob);
             log("RENDER_PDF", `Render ${fileIn} to ${fileOut}.pdf`);
         }
-    }).catch(err => error("LOAD", err));
+    } catch (err) {
+        error("LOAD", err);
+    }
 }
 
-function applyReplacements(html) {
-    for (let index in config.replacements) {
-        const replacement = config.replacements[index];
+// ------------------------
+// Apply replacements
+// ------------------------
+function applyReplacements(html, replacements = []) {
+    for (const replacement of replacements) {
         if (!replacement.regex) continue;
-        const regex = RegExp(replacement.regex, "g");
-        if (replacement.string)
-            html = html.replaceAll(regex, replacement.string);
-        else if (replacement.code)
-            html = html.replaceAll(regex, eval(replacement.code));
 
+        const regex = new RegExp(replacement.regex, "g");
+
+        if (replacement.string) {
+            html = html.replaceAll(regex, replacement.string);
+        } else if (replacement.code) {
+            html = html.replaceAll(regex, eval(replacement.code));
+        }
     }
     return html;
 }
 
+// ------------------------
+// Logging helpers
+// ------------------------
 function log(type, message) {
-    console.log(`[${type}] `, message);
+    console.log(`[${type}]`, message);
 }
+
 function error(type, message) {
-    console.error(`[${type}] `, message);
+    console.error(`[${type}]`, message);
 }

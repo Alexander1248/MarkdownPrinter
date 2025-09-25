@@ -1,12 +1,20 @@
-﻿import htmlPdf from "html-pdf-node";
+﻿import htmlPdf from "html-to-pdf.js";
 
-let conf;
-const exports = {};
-exports.init = (config) => {
-    conf = config['pdf'];
+let config = {};
+
+/**
+ * Инициализация модуля PDF
+ * @param {Object} cfg Конфигурация из main config.pdf
+ */
+export function init(cfg) {
+    config = cfg ?? {};
 }
 
-exports.render = async (html) => {
-    return await htmlPdf.generatePdf({ content: html }, conf ?? {});
+/**
+ * Рендер HTML в PDF
+ * @param {string} html HTML-контент
+ * @returns {Promise<Buffer>} Буфер PDF
+ */
+export async function render(html) {
+    return await htmlPdf.generatePdf({ content: html }, config);
 }
-export default exports;

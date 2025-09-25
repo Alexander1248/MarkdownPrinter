@@ -1,9 +1,22 @@
 ﻿markdown:
   modules:
     latex:
-      url: https://cdn.jsdelivr.net/npm/markdown-it-latex2img@0.0.6/dist/markdown-it-latex2img.min.js
+      path: https://cdn.jsdelivr.net/npm/markdown-it-latex2img@0.0.6/dist/markdown-it-latex2img.js
+    mermaid:
+      loader: |
+        <script> window.wait++;</script>
+        <script type="module">
+          import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.4/dist/mermaid.esm.min.mjs';
+          mermaid.initialize({
+            startOnLoad: true
+          });
+          setTimeout(() => {window.wait--;}, 5000);
+        </script>
   settings:
     html: true
+    linkify: true
+    typographer: true
+    breaks: true
 
 print:
   html: true
@@ -16,12 +29,15 @@ pdf:
     bottom: "2 cm"
     left: "3 cm"
     right: "1.5 cm"
+puppeteer:
+#  headless: false
+  wait_timeout: 0
 
 styles:
   - gost.css
 
 replacements:
-  - regex: <pre>\s*<code(?<prop>.*?)>(?<code>[\w\W]*?)<\/code>\s*<\/pre>
+  - regex: <pre>\s*<code(?<prop>(?!.*class="language-mermaid").*?)>(?<code>[\w\W]*?)<\/code>\s*<\/pre>
     string: |
       <table class="code">
         <tr class="code">
@@ -30,3 +46,9 @@ replacements:
           </td>
         </tr>
       </table>
+  - regex: '<pre>\s*<code\s+class="language-mermaid">(?<info>---[\w\W]*?---\s*)?(?:%%\s*Title:\s*(?<title>.*?)\s*%%)?(?<code>[\w\W]*?)<\/code>\s*<\/pre>'
+    string: |
+      <div class="mermaid-container avoid-page-break centered">
+        <div class="mermaid">$<info>$<code></div>
+        <p class="figure-caption">$<title></p>
+      </div>
