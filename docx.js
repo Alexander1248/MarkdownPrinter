@@ -18,3 +18,7 @@ export function init(cfg) {
 export function render(html) {
     return htmlDocx.asBlob(html, config);
 }
+
+export async function inject(buffer) {
+    return buffer;
+}

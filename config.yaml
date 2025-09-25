@@ -30,8 +30,15 @@ pdf:
     left: "3 cm"
     right: "1.5 cm"
 puppeteer:
-#  headless: false
+  #  headless: false
   wait_timeout: 0
+
+pages:
+  header:
+    index: 0
+    pdf: "./PKSS_Header.pdf"
+    docx: "./PKSS_Header.docx"
+
 
 styles:
   - gost.css

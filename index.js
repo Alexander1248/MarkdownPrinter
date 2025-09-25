@@ -115,13 +115,15 @@ ${html}
 
         if (printConfig.docx) {
             const blob = await docx.render(html).arrayBuffer();
-            await fsp.writeFile(`${fileOut}.docx`, Buffer.from(blob));
+            const injected = await docx.inject(blob);
+            await fsp.writeFile(`${fileOut}.docx`, Buffer.from(injected));
             log("RENDER_DOCX", `Render ${fileIn} to ${fileOut}.docx`);
         }
 
         if (printConfig.pdf) {
             const blob = await pdf.render(html);
-            await fsp.writeFile(`${fileOut}.pdf`, blob);
+            const injected = await pdf.inject(blob);
+            await fsp.writeFile(`${fileOut}.pdf`, injected);
             log("RENDER_PDF", `Render ${fileIn} to ${fileOut}.pdf`);
         }
     } catch (err) {

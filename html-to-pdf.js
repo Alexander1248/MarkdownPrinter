@@ -1,101 +1,106 @@
-const puppeteer = require('puppeteer');
-const Promise = require('bluebird');
-const hb = require('handlebars')
-// const inlineCss = require('inline-css')
-module.exports
-async function generatePdf(file, options, callback) {
-  // we are using headless mode
-  let args = [
-    '--no-sandbox',
-    '--disable-setuid-sandbox'
-  ];
-  if(options.args) {
+import puppeteer from "puppeteer";
+import Promise from "bluebird";
+import hb from "handlebars";
+// import inlineCss from "inline-css"; // если нужно
+
+/**
+ * Генерация одного PDF
+ * @param {Object} file { content?: string, url?: string }
+ * @param {Object} options опции Puppeteer
+ * @param {Function} [callback] колбэк
+ * @returns {Promise<Buffer>}
+ */
+export async function generatePdf(file, options, callback) {
+  let args = ["--no-sandbox", "--disable-setuid-sandbox"];
+  if (options.args) {
     args = options.args;
     delete options.args;
   }
 
   const browser = await puppeteer.launch({
-    args: args,
+    args,
     headless: options.puppeteer?.headless ?? true,
   });
   const page = await browser.newPage();
 
-  if(file.content) {
-    data = file.content//await inlineCss(file.content, {url:"/"})
-    console.log("Compiling the template with handlebars")
-    // we have compile our code with handlebars
-    const template = hb.compile(data, { strict: true });
-    const result = template(data);
-    const html = result;
+  if (file.content) {
+    const data = file.content; // await inlineCss(file.content, { url: "/" })
+    console.log("Compiling the template with handlebars");
 
-    // We set the page content as the generated html by handlebars
+    const template = hb.compile(data, { strict: true });
+    const html = template(data);
+
     await page.setContent(html, {
-      waitUntil: 'networkidle0', // wait for page to load completely
-      timeout: options.puppeteer?.wait_timeout ?? 60000
+      waitUntil: "networkidle0",
+      timeout: options.puppeteer?.wait_timeout ?? 60000,
     });
+
     try {
-      await page.waitForFunction('window.wait <= 0', {
-        timeout: options.puppeteer?.wait_timeout ?? 60000
+      await page.waitForFunction("window.wait <= 0", {
+        timeout: options.puppeteer?.wait_timeout ?? 60000,
       });
-    } catch (e) {}
+    } catch {
+      // игнорируем timeout
+    }
   } else {
     await page.goto(file.url, {
-      waitUntil:[ 'load', 'networkidle0'], // wait for page to load completely
+      waitUntil: ["load", "networkidle0"],
     });
   }
 
   return Promise.props(page.pdf(options))
-    .then(async function(data) {
-       await browser.close();
-
-       return Buffer.from(Object.values(data));
-    }).asCallback(callback);
+      .then(async function (data) {
+        await browser.close();
+        return Buffer.from(Object.values(data));
+      })
+      .asCallback(callback);
 }
 
-async function generatePdfs(files, options, callback) {
-  // we are using headless mode
-  let args = [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-  ];
-  if(options.args) {
+/**
+ * Генерация массива PDF
+ * @param {Array} files список файлов { content?: string, url?: string }
+ * @param {Object} options опции Puppeteer
+ * @param {Function} [callback] колбэк
+ * @returns {Promise<Array<{ buffer: Buffer }>>}
+ */
+export async function generatePdfs(files, options, callback) {
+  let args = ["--no-sandbox", "--disable-setuid-sandbox"];
+  if (options.args) {
     args = options.args;
     delete options.args;
   }
-  const browser = await puppeteer.launch({
-    args: args
-  });
-  let pdfs = [];
+
+  const browser = await puppeteer.launch({ args });
   const page = await browser.newPage();
-  for(let file of files) {
-    if(file.content) {
-      data = file.content//await inlineCss(file.content, {url:"/"})
-      console.log("Compiling the template with handlebars")
-      // we have compile our code with handlebars
+
+  const pdfs = [];
+  for (const file of files) {
+    if (file.content) {
+      const data = file.content;
+      console.log("Compiling the template with handlebars");
+
       const template = hb.compile(data, { strict: true });
-      const result = template(data);
-      const html = result;
-      // We set the page content as the generated html by handlebars
+      const html = template(data);
+
       await page.setContent(html, {
-        waitUntil: 'networkidle0', // wait for page to load completely
+        waitUntil: "networkidle0",
       });
     } else {
       await page.goto(file.url, {
-        waitUntil: 'networkidle0', // wait for page to load completely
+        waitUntil: "networkidle0",
       });
     }
-    let pdfObj = JSON.parse(JSON.stringify(file));
-    delete pdfObj['content'];
-    pdfObj['buffer'] = Buffer.from(Object.values(await page.pdf(options)));
+
+    const pdfObj = { ...file };
+    delete pdfObj.content;
+    pdfObj.buffer = Buffer.from(Object.values(await page.pdf(options)));
     pdfs.push(pdfObj);
   }
 
   return Promise.resolve(pdfs)
-    .then(async function(data) {
-       await browser.close();
-       return data;
-    }).asCallback(callback);
+      .then(async function (data) {
+        await browser.close();
+        return data;
+      })
+      .asCallback(callback);
 }
-
-module.exports.generatePdf = generatePdf;
-module.exports.generatePdfs = generatePdfs;
