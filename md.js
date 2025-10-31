@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import fetch from "node-fetch"; // Асинхронный fetch для URL
 import requireFromUrl from "require-from-web"
 
-const imgRegex = /<img(?<before>.*)src="(?<url>(?!data:image\/.+;base64,).+?)"(?<after>.*?)\/>/g;
+const imgRegex = /<img(?<before>.*)src="(?<url>(?!data:image\/.+;base64,).+?)"(?<after>.*?)\/?>/gm;
 const doctypeRegex = /<!DOCTYPE.+?>/g;
 
 function hashUrl(url) {

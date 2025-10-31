@@ -4,7 +4,7 @@ body {
     font-size: 14pt;
     line-height: 1.5;
     text-align: justify;
-    counter-reset: table 1 fig 0;
+    counter-reset: table 1 fig 0 listing 1;
 }
 
 p {
@@ -38,22 +38,12 @@ table {
     margin: 12pt auto;
     font-size: 12pt;
     width: 100%;
-    counter-increment: table;
 }
 table, tr, td, th {
     border: 1px solid black;
 }
 td, th {
     padding: 4pt 6pt;
-}
-caption {
-    caption-side: bottom;
-    text-align: center;
-    font-size: 12pt;
-    margin-top: 6pt;
-}
-caption::before {
-    content: "Таблица " counter(table) " — ";
 }
 
 /* Рисунки и диаграммы */
@@ -79,8 +69,17 @@ img, .mermaid-container {
 }
 .table-caption::before {
     content: "Таблица " counter(table) " — ";
+    counter-increment: table;
 }
 
+.listing-caption {
+    font-size: 10pt;
+    margin-top: 6pt;
+}
+.listing-caption::before {
+    content: "Листинг " counter(listing) " — ";
+    counter-increment: listing;
+}
 .centered {
     display: flex;
     flex-direction: column;   /* чтобы диаграмма и подпись шли вертикально */
@@ -111,5 +110,22 @@ img, .mermaid-container {
     table {
         page-break-inside: avoid;
         page-break-after: auto;
+    }
+
+    .centered {
+        display: flex;
+        flex-direction: column;   /* чтобы диаграмма и подпись шли вертикально */
+        align-items: center;      /* горизонтальное выравнивание */
+        justify-content: center;  /* вертикальное, если контейнер имеет высоту */
+        text-align: center;       /* для подписи */
+        margin: 0 auto;           /* центрирование, если фиксированная ширина */
+    }
+    img, .mermaid-container {
+        display: block;
+        margin: 12pt auto;
+        max-width: 90%;
+        height: auto;
+        text-align: center;
+        counter-increment: fig;
     }
 }

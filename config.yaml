@@ -36,9 +36,15 @@ puppeteer:
 pages:
   header:
     index: 0
+    file: "./PKSS.md"
     pdf: "./PKSS_Header.pdf"
     docx: "./PKSS_Header.docx"
 
+env:
+  table: "./values.csv"
+  values:
+    version1:
+      tag: core
 
 styles:
   - gost.css

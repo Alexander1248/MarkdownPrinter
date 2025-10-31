@@ -79,7 +79,7 @@ async function processDirectory(dirPath) {
             }
         }
 
-        await markdownToFiles(resolve(dirPath, fileIn), fileOut, config.style);
+        await markdownToFiles(resolve(dirPath, fileIn), fileOut, dirPath, config.style);
     }
 }
 
@@ -88,7 +88,7 @@ await processDirectory(__dirname);
 // ------------------------
 // Markdown -> Files
 // ------------------------
-async function markdownToFiles(fileIn, fileOut, style) {
+async function markdownToFiles(fileIn, fileOut, rootDir, style) {
     try {
         const rawData = await fsp.readFile(fileIn, "utf-8");
         let html = await md.render(rawData.toString());
@@ -122,7 +122,7 @@ ${html}
 
         if (printConfig.pdf) {
             const blob = await pdf.render(html);
-            const injected = await pdf.inject(blob);
+            const injected = await pdf.inject(blob, fileIn, rootDir);
             await fsp.writeFile(`${fileOut}.pdf`, injected);
             log("RENDER_PDF", `Render ${fileIn} to ${fileOut}.pdf`);
         }
