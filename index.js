@@ -5,6 +5,7 @@ import YAML from "yaml";
 import fetch from "node-fetch"; // асинхронный fetch
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { Worker } from "worker_threads"
 
 import { MarkdownRenderer } from "./md.js";
 import * as docx from "./docx.js";
@@ -78,8 +79,10 @@ async function processDirectory(dirPath) {
                 fileOut = fileOut.replace(`{{${key}}}`, match.groups[key]);
             }
         }
-
-        await markdownToFiles(resolve(dirPath, fileIn), fileOut, dirPath, config.style);
+        const filename = resolve(dirPath, fileIn);
+        markdownToFiles(filename, fileOut, dirPath, config.style).then(r =>
+            log("PROCESSOR", `File ${filename} converted!`)
+        );
     }
 }
 
