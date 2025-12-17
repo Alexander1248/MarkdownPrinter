@@ -77,21 +77,21 @@ const sharedContext = {
 };
 
 
-process.stdin.resume(); // so the program will not close instantly
-async function exitHandler(options, exitCode) {
-    if (printConfig.base_pdf) await base_pdf.complete();
-    if (exitCode || exitCode === 0) console.log(exitCode);
-    process.exit();
-}
-// do something when app is closing
-process.on('exit', exitHandler.bind(null,{}));
-// catches ctrl+c event
-process.on('SIGINT', exitHandler.bind(null, {}));
-// catches "kill pid" (for example: nodemon restart)
-process.on('SIGUSR1', exitHandler.bind(null, {}));
-process.on('SIGUSR2', exitHandler.bind(null, {}));
-// catches uncaught exceptions
-process.on('uncaughtException', exitHandler.bind(null, {}));
+// process.stdin.resume(); // so the program will not close instantly
+// async function exitHandler(options, exitCode) {
+//     if (printConfig.base_pdf) await base_pdf.complete();
+//     if (exitCode || exitCode === 0) console.log(exitCode);
+//     process.exit();
+// }
+// // do something when app is closing
+// process.on('exit', exitHandler.bind(null,{}));
+// // catches ctrl+c event
+// process.on('SIGINT', exitHandler.bind(null, {}));
+// // catches "kill pid" (for example: nodemon restart)
+// process.on('SIGUSR1', exitHandler.bind(null, {}));
+// process.on('SIGUSR2', exitHandler.bind(null, {}));
+// // catches uncaught exceptions
+// process.on('uncaughtException', exitHandler.bind(null, {}));
 
 
 await md.init(config, sharedContext, error);

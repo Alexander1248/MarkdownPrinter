@@ -99,7 +99,7 @@
     breaks: true
 
 recursive: false
-task_limiter: 2
+task_limiter: 1 # Unstable if > 1
 
 print:
   html: true
