@@ -1,131 +1,311 @@
-﻿/* Общие требования ГОСТ */
+﻿/* =========================================================
+   БАЗОВЫЕ ГОСТ-СТИЛИ (ОБЩИЕ)
+   ========================================================= */
+
 body {
     font-family: "Times New Roman", Times, serif;
     font-size: 14pt;
     line-height: 1.5;
     text-align: justify;
-    counter-reset: table 1 fig 0 listing 1;
+
+    /* Счётчики */
+    counter-reset: table 0 fig 0 listing 1 h1 0 h2 0 h3 0;
 }
 
 p {
-    font-size: 14pt;
     margin: 0 0 12pt 0;
-    text-indent: 1.25cm; /* абзацный отступ по ГОСТ */
+    text-indent: 1.25cm;
+    font-size: 14pt;
 }
 
-/* Заголовки */
+/* =========================================================
+   ЗАГОЛОВКИ
+   ========================================================= */
+
 h1 {
-    font-size: 20pt;
-    text-align: center;
-    font-weight: bold;
-    margin: 24pt 0 12pt 0;
-}
-h2 {
     font-size: 18pt;
     text-align: center;
     font-weight: bold;
-    margin: 18pt 0 12pt 0;
+    margin: 24pt 0 12pt 0;
+    counter-reset: h2 0 h3 0;
 }
-h3 {
+h1.numerated::before {
+    counter-increment: h1;
+    content: counter(h1) ". ";
+}
+
+h2 {
     font-size: 16pt;
+    font-weight: bold;
+    margin: 18pt 0 12pt 0;
+    counter-reset:h3 0;
+}
+h2.numerated::before {
+    counter-increment: h2;
+    content: counter(h1) "." counter(h2) ". ";
+}
+
+h3 {
+    font-size: 14pt;
     font-weight: bold;
     margin: 12pt 0 12pt 0;
 }
+h3.numerated::before {
+    counter-increment: h3;
+    content: counter(h1) "." counter(h2) "." counter(h3) ". ";
+}
 
-/* Таблицы */
+h4 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 12pt 0 12pt 0;
+}
+h4.numerated::before {
+    counter-increment: h3;
+    content: counter(h1) "." counter(h2) "." counter(h3) ". ";
+}
+
+h5 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 12pt 0 12pt 0;
+}
+h5.numerated::before {
+    counter-increment: h3;
+    content: counter(h1) "." counter(h2) "." counter(h3) ". ";
+}
+
+h6 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 12pt 0 12pt 0;
+}
+h6.numerated::before {
+    counter-increment: h3;
+    content: counter(h1) "." counter(h2) "." counter(h3) ". ";
+}
+
+.toc a {
+    color: black;
+    text-decoration: none;
+}
+.toc ol {
+    list-style-type: none;
+    margin: 0;
+}
+
+/* =========================================================
+   СПИСКИ
+   ========================================================= */
+
+ul {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+ul > li {
+    padding-left: 1em;
+    text-indent: -1em;
+}
+
+ul > li::before {
+    content: "– ";
+}
+
+/* =========================================================
+   ТАБЛИЦЫ (ОБЩИЕ)
+   ========================================================= */
+
 table {
+    width: 100%;
     border-collapse: collapse;
     margin: 12pt auto;
     font-size: 12pt;
-    width: 100%;
-}
-table, tr, td, th {
-    border: 1px solid black;
-}
-td, th {
-    padding: 4pt 6pt;
+
+    /* браузер */
+    page-break-inside: auto;
+
+    /* Prince */
+    prince-break-inside: auto;
 }
 
-/* Рисунки и диаграммы */
-img, .mermaid-container {
+thead {
+    display: table-header-group;
+}
+
+tbody {
+    display: table-row-group;
+}
+
+tfoot {
+    display: table-footer-group;
+}
+
+table, th, td {
+    border: 1px solid black;
+}
+
+th, td {
+    padding: 4pt 6pt;
+    vertical-align: top;
+}
+
+/* =========================================================
+   ПОДПИСИ К ТАБЛИЦАМ
+   ========================================================= */
+
+.table-caption {
+    font-style: italic;
+    font-size: 14pt;
+    margin: 6pt 0 6pt 0;
+    text-align: left;
+}
+
+.table-caption::before {
+    counter-increment: table;
+    content: "Таблица " counter(table) " — ";
+}
+
+/* Для Prince — caption корректнее, но браузер не ломаем */
+caption.table-caption {
+    caption-side: top;
+    text-align: left;
+
+    /* Prince */
+    prince-caption-side: top;
+}
+
+/* =========================================================
+   ПРОДОЛЖЕНИЕ ТАБЛИЦЫ
+   ========================================================= */
+
+/* Скрыто по умолчанию */
+.table-continued {
+    display: none;
+    font-style: italic;
+    font-size: 14pt;
+}
+
+/* Prince автоматически может вставлять */
+@media print {
+    .table-continued {
+        display: block;
+    }
+}
+
+/* =========================================================
+   ИЗОБРАЖЕНИЯ / ДИАГРАММЫ
+   ========================================================= */
+
+img,
+.mermaid-container {
     display: block;
     margin: 12pt auto;
     max-width: 90%;
     height: auto;
     text-align: center;
+
     counter-increment: fig;
 }
+
 .figure-caption {
     text-align: center;
-    font-size: 12pt;
+    font-size: 14pt;
     margin-top: 6pt;
 }
+
 .figure-caption::before {
     content: "Рисунок " counter(fig) " — ";
 }
-.table-caption {
-    font-size: 10pt;
-    margin-top: 6pt;
-}
-.table-caption::before {
-    content: "Таблица " counter(table) " — ";
-    counter-increment: table;
-}
+
+/* =========================================================
+   ЛИСТИНГИ
+   ========================================================= */
 
 .listing-caption {
-    font-size: 10pt;
-    margin-top: 6pt;
+    font-style: italic;
+    font-size: 14pt;
+    margin: 6pt 0;
+    text-align: left;
 }
+
 .listing-caption::before {
-    content: "Листинг " counter(listing) " — ";
     counter-increment: listing;
+    content: "Листинг " counter(listing) " — ";
 }
+
+/* =========================================================
+   ЦЕНТРИРОВАНИЕ
+   ========================================================= */
+
 .centered {
     display: flex;
-    flex-direction: column;   /* чтобы диаграмма и подпись шли вертикально */
-    align-items: center;      /* горизонтальное выравнивание */
-    justify-content: center;  /* вертикальное, если контейнер имеет высоту */
-    text-align: center;       /* для подписи */
-    margin: 0 auto;           /* центрирование, если фиксированная ширина */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0 auto;
 }
 
-/* Принт и разрывы страниц */
+/* =========================================================
+   ПЕЧАТЬ / PDF
+   ========================================================= */
+
 @media print {
-    @page {
-        margin: 2cm 1.5cm 2cm 3cm;
-        size: A4 portrait;   /* ориентация и размер страницы */
-    }
     .page-break {
         break-after: page;
-    }
-    .mermaid-container {
-        display: inline-block;
-        page-break-inside: avoid;
-        break-inside: avoid;
-    }
-    .avoid-page-break {
-        page-break-inside: avoid;
-        page-break-after: auto;
-    }
-    table {
-        page-break-inside: avoid;
-        page-break-after: auto;
+        page-break-after: always;
     }
 
-    .centered {
-        display: flex;
-        flex-direction: column;   /* чтобы диаграмма и подпись шли вертикально */
-        align-items: center;      /* горизонтальное выравнивание */
-        justify-content: center;  /* вертикальное, если контейнер имеет высоту */
-        text-align: center;       /* для подписи */
-        margin: 0 auto;           /* центрирование, если фиксированная ширина */
+    .avoid-page-break {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
-    img, .mermaid-container {
-        display: block;
-        margin: 12pt auto;
-        max-width: 90%;
-        height: auto;
-        text-align: center;
-        counter-increment: fig;
+
+    @page {
+        size: A4 portrait;
+        margin: 2cm 1.5cm 2cm 3cm;
+        counter-increment: page;
+        /*@top-center {*/
+        /*    content: "Заголовок страницы";*/
+        /*}*/
+        @bottom-center {
+            content: counter(page);
+        }
     }
+
+    table {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    .mermaid-container,
+    img {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* =====================================================
+       PRINCE-SPECIFIC (БРАУЗЕР ПРОСТО ИГНОРИРУЕТ)
+       ===================================================== */
+
+    table {
+        page-break-inside: avoid;
+        prince-break-inside: auto;
+    }
+
+    thead {
+        prince-table-header-repeat: 1;
+    }
+
+    .toc a::after {
+        content: leader('.') target-counter(attr(href), page);
+    }
+
+    /*caption.table-caption::after {*/
+    /*    content: " (продолжение)";*/
+    /*    prince-text-replace: "Таблица";*/
+    /*    prince-text-show-on: continuation;*/
+    /*}*/
 }

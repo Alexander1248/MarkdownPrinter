@@ -2,43 +2,141 @@
   modules:
     latex:
       path: https://cdn.jsdelivr.net/npm/markdown-it-latex2img@0.0.6/dist/markdown-it-latex2img.js
+    anchors:
+      path: https://cdn.jsdelivr.net/npm/markdown-it-anchor@9.2.0/+esm
+      configurer: |
+        ({ slugify }) => {
+          return { 
+             slugify: s => slugify(s)
+          }
+        }
+    attrs:
+      path: https://cdn.jsdelivr.net/npm/markdown-it-attrs@4.3.1/markdown-it-attrs.browser.min.js
+    toc:
+      path: https://cdn.jsdelivr.net/npm/markdown-it-table-of-contents@1.1.0/index.min.js
+      configurer: |
+        ({ slugify, log, store }) => {
+          const counters = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+          return { 
+            slugify: s => slugify(s),
+            containerClass: "toc page-break",
+            listType: "ol",
+            containerHeaderHtml: "<h1>СОДЕРЖАНИЕ</h1>",
+            format: (content, md, anchor) => {
+              const id = anchor?.startsWith("#") ? anchor.slice(1) : anchor
+              const level = store.headingLevels?.[id]
+            
+              // fallback
+              if (!level) return md.renderInline(content)
+
+              // счётчики
+              counters[level]++
+              for (let i = level + 1; i <= 6; i++) counters[i] = 0
+
+              const prefix =
+              Object.values(counters)
+              .slice(0, level)
+              .filter(n => n > 0)
+              .join(".") + ". "
+            
+              return md.renderInline(prefix + content)
+            },
+          }
+        }
+    toc-support:
+      rule: |
+        (md, options) => {
+          md.core.ruler.push("collect-heading-levels", state => {
+            state.tokens.forEach((t, i) => {
+              if (t.type === "heading_open") {
+                const level = Number(t.tag[1])
+
+                // Проверяем класс numerated
+                const classAttr = t.attrGet("class") || ""
+                const hasNumerated = classAttr.split(/\s+/).includes("numerated")
+                if (!hasNumerated) return  // Пропускаем, если нет numerated
+        
+                const inline = state.tokens[i + 1]
+                const text = inline.content
+        
+                const id =
+                  t.attrGet("id") ??
+                  md.options.slugify(text)
+        
+                options.headingLevels[id] = level
+              }
+            })
+          })
+        }
+      configurer: |
+        ({ store }) => {
+          store.headingLevels = {};
+          return { 
+             headingLevels: store.headingLevels
+          }
+        }
     mermaid:
       loader: |
         <script> window.wait++;</script>
         <script type="module">
           import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10.9.4/dist/mermaid.esm.min.mjs';
           mermaid.initialize({
-            startOnLoad: true
+            startOnLoad: true,
+            htmlLabels: false,
+            flowchart: {
+              htmlLabels: false
+            }
           });
           setTimeout(() => {window.wait--;}, 5000);
         </script>
+#    paged:
+#      loader: |
+#        <script src="paged.polyfill.js" onload=""></script>
   settings:
     html: true
-    linkify: true
+    linkify: false
     typographer: true
     breaks: true
 
+recursive: false
+task_limiter: 2
+
 print:
   html: true
-  pdf: true
+  base_pdf: true
+  prince_pdf: true
 
-pdf:
-  format: 'A4'
-  margin:
-    top: "2 cm"
-    bottom: "2 cm"
-    left: "3 cm"
-    right: "1.5 cm"
-puppeteer:
-  #  headless: false
-  wait_timeout: 0
+base_pdf:
+  pdf:
+    format: 'A4'
+    margin:
+      top: "2 cm"
+      bottom: "2 cm"
+      left: "3 cm"
+      right: "1.5 cm"
+  puppeteer:
+#    headless: false
+    wait_timeout: 0
+
+prince_pdf:
+  timeout: 60000
+
 
 pages:
-  header:
+  header_pkss:
     index: 0
     file: "./PKSS.md"
     pdf: "./PKSS_Header.pdf"
     docx: "./PKSS_Header.docx"
+  header_bd6:
+    index: 0
+    file: "./bd6.md"
+    pdf: "./bd6_Header.pdf"
+  header_bd7:
+    index: 0
+    file: "./"
+    pdf: "./bd7_Header.pdf"
+
 
 env:
   table: "./values.csv"
@@ -50,18 +148,165 @@ styles:
   - gost.css
 
 replacements:
-  - regex: <pre>\s*<code(?<prop>(?!.*class="language-mermaid").*?)>(?<code>[\w\W]*?)<\/code>\s*<\/pre>
-    string: |
+  - regex: '(?<titleBlock><p[^>]*>\s*Title:\s*(?<titleText>.+?)\s*<\/p>\s*)?(?<table><table[^>]*>[\w\W]*?<\/table>)'
+    code: |
+      ({}, substring, ...args) => {
+      const { titleText, table } = args.at(-1);
+      const title = titleText?.trim();
+      if (!titleText) return table;
+      
+      // Вставляем caption сразу после <table>
+      return table.replace(
+      /<table([^>]*)>/,
+      `<table$1>
+        <caption class="table-caption">
+          ${titleText}
+        </caption>`
+      );
+      }
+  - regex: '<pre>\\s*<code(?<prop>(?!.*class="language-(?:mermaid|plantuml)").*?)>(?<yaml>---[\\w\\W]*?---\\s*)?(?<code>[\\w\\W]*?)<\\/code>\\s*<\\/pre>'
+    code: |
+      ({ yaml }, substring, ...args) => {
+      const groups = args.at(-1);
+      const yamlBlock = groups.yaml ?? "";
+      const code = groups.code ?? "";
+      const prop = groups.prop ?? "";
+
+      let title;
+
+      if (yamlBlock) {
+      try {
+        const meta = yaml.parse(yamlBlock.replace(/---/g, ""));
+        title = meta.title;
+      } catch (e) {
+        // Не критично, можно логировать при необходимости
+      }
+      }
+
+      return `
       <table class="code">
+        ${title ? `<caption class="listing-caption">${title}</caption>` : ""}
         <tr class="code">
           <td class="code">
-            <pre><code$<prop>>$<code></code></pre>
+            <pre><code${prop}>${yamlBlock}${code}</code></pre>
           </td>
         </tr>
       </table>
-  - regex: '<pre>\s*<code\s+class="language-mermaid">(?<info>---[\w\W]*?---\s*)?(?:%%\s*Title:\s*(?<title>.*?)\s*%%)?(?<code>[\w\W]*?)<\/code>\s*<\/pre>'
-    string: |
-      <div class="mermaid-container avoid-page-break centered">
-        <div class="mermaid">$<info>$<code></div>
-        <p class="figure-caption">$<title></p>
-      </div>
+      `;
+      }
+  - regex: '<pre>\s*<code\s+class="language-mermaid">(?<yaml>---[\w\W]*?---\s*)?(?<code>[\w\W]*?)<\/code>\s*<\/pre>'
+    code: |
+      ({ yaml, log }, substring, ...args) => {
+        const { yaml: yamlBlock = "", code = "" } = args.at(-1);
+      
+        let meta = {};
+        let title, width, height;
+      
+        if (yamlBlock) {
+          try {
+            meta = yaml.parse(yamlBlock.replace(/---/g, ""));
+            title = meta.title;
+            width = meta.width;
+            height = meta.height;
+          } catch (e) {
+            log("YAML parse error: " + e.message);
+          }
+        }
+        var htmlEntities = { nbsp: ' ', cent: '¢', pound: '£', yen: '¥', euro: '€', copy: '©', reg: '®', lt: '<', gt: '>', quot: '"', amp: '&', apos: '\'' }; function unescapeHTML(str) { return str.replace(/\&([^;]+);/g, function (entity, entityCode) { var match; if (entityCode in htmlEntities) { return htmlEntities[entityCode]; /*eslint no-cond-assign: 0*/ } else if (match = entityCode.match(/^#x([\da-fA-F]+)$/)) { return String.fromCharCode(parseInt(match[1], 16)); /*eslint no-cond-assign: 0*/ } else if (match = entityCode.match(/^#(\d+)$/)) { return String.fromCharCode(~~match[1]); } else { return entity; } }); };
+      
+        return `
+          <div class="image-container mermaid-container avoid-page-break centered">
+            <div class="mermaid centered" ${width || height ? `style="${width ? `width: ${width};` : ""} ${height ? `height: ${height};` : ""}"` : ""}>${yamlBlock}${unescapeHTML(code.trim())}</div>
+            ${title ? `<p class="figure-caption">${title}</p>` : ""}
+          </div>
+          `;
+        }
+  - regex: '<pre>\s*<code\s+class="language-plantuml">(?<yaml>---[\w\W]*?---\s*)?(?<code>[\w\W]*?)<\/code>\s*<\/pre>'
+    code: |
+      ({ zlib, yaml, error }, substring, ...args) => {
+        const { yaml: yamlBlock = "", code = "" } = args.at(-1);
+      
+        let title, width, height;
+        if (yamlBlock) {
+          try {
+            const meta = yaml.parse(yamlBlock.replace(/---/g, ""));
+            title = meta.title;
+            width = meta.width;
+            height = meta.height;
+          } catch (e) {
+            error("YAML parse error: " + e.message);
+          }
+        }
+      
+        function encode6bit(b) {
+          if (b < 10) return String.fromCharCode(48 + b);
+          b -= 10;
+          if (b < 26) return String.fromCharCode(65 + b);
+          b -= 26;
+          if (b < 26) return String.fromCharCode(97 + b);
+          b -= 26;
+          if (b === 0) return "-";
+          if (b === 1) return "_";
+          return "?";
+        }
+      
+        function append3bytes(b1, b2, b3) {
+          const c1 = b1 >> 2;
+          const c2 = ((b1 & 0x3) << 4) | (b2 >> 4);
+          const c3 = ((b2 & 0xF) << 2) | (b3 >> 6);
+          const c4 = b3 & 0x3F;
+      
+          return (
+            encode6bit(c1 & 0x3F) +
+            encode6bit(c2 & 0x3F) +
+            encode6bit(c3 & 0x3F) +
+            encode6bit(c4 & 0x3F)
+          );
+        }
+      
+        function plantUmlEncode(buffer) {
+          let result = "";
+          for (let i = 0; i < buffer.length; i += 3) {
+            result += append3bytes(
+              buffer[i],
+              buffer[i + 1] ?? 0,
+              buffer[i + 2] ?? 0
+            );
+          }
+          return result;
+        }
+        var htmlEntities = { nbsp: ' ', cent: '¢', pound: '£', yen: '¥', euro: '€', copy: '©', reg: '®', lt: '<', gt: '>', quot: '"', amp: '&', apos: '\'' }; function unescapeHTML(str) { return str.replace(/\&([^;]+);/g, function (entity, entityCode) { var match; if (entityCode in htmlEntities) { return htmlEntities[entityCode]; /*eslint no-cond-assign: 0*/ } else if (match = entityCode.match(/^#x([\da-fA-F]+)$/)) { return String.fromCharCode(parseInt(match[1], 16)); /*eslint no-cond-assign: 0*/ } else if (match = entityCode.match(/^#(\d+)$/)) { return String.fromCharCode(~~match[1]); } else { return entity; } }); };
+        const compressed = zlib.deflateRawSync(unescapeHTML(code.trim()));
+        const encoded = plantUmlEncode(compressed);
+      
+        return `
+          <div class="image-container plantuml-container avoid-page-break centered">
+            <img ${width ? `width="${width}"` : ""} ${height ? `height="${height}"` : ""} src="https://img.plantuml.biz/plantuml/png/${encoded}">
+            ${title ? `<p class="figure-caption">${title}</p>` : ""}
+          </div>
+        `;
+      }
+  - regex: '(<h[1-3][^>]*>[^<]*?<\/h[1-3]>)\s*(?:(<table[\w\W]*?<\/table>)|(<img[^>]*>)|(<div[^>]*class="[^"]*image-container[^"]*"[\w\W]*?<\/div>))'
+    code: |
+      ({}, substring, ...args) => {
+        const header = args[0];
+        const table = args[1];
+        const img = args[2];
+        const container = args[3];
+
+        const content = table || img || container;
+
+        if (!header || !content) return substring;
+
+        // Если уже есть avoid-page-break — ничего не делаем
+        if (/avoid-page-break/.test(header) || /avoid-page-break/.test(content)) {
+          return substring;
+        }
+
+        return `
+        <div class="avoid-page-break">
+          ${header}
+          ${content}
+        </div>
+        `;
+      }

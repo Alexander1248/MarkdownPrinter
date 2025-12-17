@@ -1,25 +1,44 @@
-﻿import * as htmlPdf from "./html-to-pdf.js";
+﻿import * as htmlRender from "./html-render.js";
 import { PDFDocument } from "pdf-lib";
 import fsp from "fs/promises";
 import * as path from 'path';
 
+
+
+let base_config  = {}
 let config = {};
 
 /**
  * Инициализация модуля PDF
  * @param {Object} cfg Конфигурация из main config.pdf
  */
-export function init(cfg) {
-    config = cfg ?? {};
+export async function init(cfg) {
+    base_config = cfg ?? {};
+    config = cfg.base_pdf ?? {};
+    await htmlRender.init(config)
 }
+export async function complete() {
+    await htmlRender.close()
+}
+
+
 
 /**
  * Рендер HTML в PDF
  * @param {string} html HTML-контент
  * @returns {Promise<Buffer>} Буфер PDF
  */
-export async function render(html) {
-    return await htmlPdf.generatePdf({ content: html }, config);
+export async function renderPdf(html) {
+    return await htmlRender.generatePdf({ content: html }, config);
+}
+
+/**
+ * Рендер HTML
+ * @param {string} html HTML-контент
+ * @returns {Promise<string>} HTML-контент
+ */
+export async function renderHtml(html) {
+    return await htmlRender.generateHtml({ content: html }, config);
 }
 
 /**
@@ -32,7 +51,7 @@ export async function render(html) {
 export async function inject(buffer, filepath, baseDir) {
     const doc = await PDFDocument.load(buffer);
 
-    let pages = config?.pages ?? {};
+    let pages = base_config?.pages ?? {};
     if (pages && Object.keys(pages).length !== 0) {
         for (const key of Object.keys(pages)) {
             const entry = pages[key];
@@ -59,7 +78,7 @@ export async function inject(buffer, filepath, baseDir) {
         }
     }
 
-    let env = config?.env ?? {};
+    let env = base_config?.env ?? {};
     if (env) {
 
     }

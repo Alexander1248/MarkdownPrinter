@@ -1,49 +1,31 @@
 import markdownIt from "markdown-it";
 import fs from "fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import fetch from "node-fetch"; // Асинхронный fetch для URL
 import requireFromUrl from "require-from-web"
+import * as util from "node:util";
+import importUrl from "./import.js";
 
 const imgRegex = /<img(?<before>.*)src="(?<url>(?!data:image\/.+;base64,).+?)"(?<after>.*?)\/?>/gm;
 const doctypeRegex = /<!DOCTYPE.+?>/g;
 
-function hashUrl(url) {
-    return crypto.createHash("sha256").update(url).digest("hex");
-}
-
-/**
- * Импорт модуля с URL с кешированием на диск
- */
-async function importFromUrl(url, tempDir = "./.tmp_modules") {
-    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-
-    const fileName = path.join(tempDir, hashUrl(url) + ".mjs");
-
-    if (!fs.existsSync(fileName)) {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to fetch ${url}`);
-        const code = await res.text();
-        fs.writeFileSync(fileName, code, "utf8");
-    }
-
-    return await import(`file://${path.resolve(fileName)}`);
-}
 
 export class MarkdownRenderer {
     constructor() {
         this.md = markdownIt();
         this.loader = "";
+        this.convertImages = true;
     }
 
     /**
      * Инициализация с конфигом
      */
-    async init(config, errorLogger = console.error) {
+    async init(config, sharedContext, errorLogger = console.error) {
         const conf = config.markdown || {};
 
         if (conf.settings) this.md = markdownIt(conf.settings);
 
+        if (conf.convertImages != null) this.convertImages = conf.convertImages;
 
         if (conf.modules) {
             for (let key in conf.modules) {
@@ -57,26 +39,38 @@ export class MarkdownRenderer {
                             try {
                                 plugin = await requireFromUrl(moduleConfig.path);
                             } catch(err) {
-                                errorLogger("MODULES", err);
+                                errorLogger("MODULES", util.inspect(err));
                             }
                         }
                         // 2. Если не получилось — ESM
-                        if (!plugin) {
-                            const mod = await importFromUrl(moduleConfig.path);
-                            plugin = mod.default || mod;
-                        }
+                        if (!plugin)
+                            plugin = await importUrl(moduleConfig.path);
+                        // if (moduleConfig.import) {
+                        //     plugin = plugin.default[moduleConfig.import];
+                        // }
+
+                        if (typeof plugin !== "function")
+                            plugin = plugin.default;
 
                         if (typeof plugin !== "function")
                             throw new Error(`Plugin ${key} is not a function`);
 
-                        this.md.use(plugin, moduleConfig.settings);
+                        let settings;
+                        if (moduleConfig.settings) settings = moduleConfig.settings;
+                        else if (moduleConfig.configurer) settings = eval(moduleConfig.configurer)(sharedContext, moduleConfig);
+                        this.md.use(plugin, settings);
                     }
-
                     if (moduleConfig.loader) {
                         this.loader += moduleConfig.loader + "\n";
                     }
-                } catch (e) {
-                    errorLogger("MODULES", `Module ${key} failed!\n${e}`);
+                    if (moduleConfig.rule) {
+                        let settings;
+                        if (moduleConfig.settings) settings = moduleConfig.settings;
+                        else if (moduleConfig.configurer) settings = eval(moduleConfig.configurer)(sharedContext, moduleConfig);
+                        this.md.use(eval(moduleConfig.rule), settings);
+                    }
+                } catch (err) {
+                    errorLogger("MODULES", `Module ${key} failed!\n${util.inspect(err)}`);
                 }
             }
         }
@@ -93,8 +87,9 @@ export class MarkdownRenderer {
      * Рендер Markdown с конвертацией <img> в base64
      */
     async render(text) {
-        const html = this.md.render(text);
-        return await this.replaceImages(html);
+        const html = this.md.render(text, {});
+        if (this.convertImages) return await this.replaceImages(html);
+        return html;
     }
 
     /**

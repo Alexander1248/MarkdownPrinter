@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js -c=config.yaml"
+    "start": "node index.js -c=config.yaml -p=./files"
   },
   "keywords": [],
   "author": "Alexander1248",
@@ -11,13 +11,16 @@
   "description": "Markdown printer with modularity and style support",
   "type": "module",
   "dependencies": {
+    "@sindresorhus/slugify": "^3.0.0",
     "args": "^5.0.3",
     "bluebird": "^3.7.2",
     "handlebars": "^4.7.8",
     "html-docx-js": "^0.3.1",
     "markdown-it": "^14.1.0",
     "node-fetch": "^3.3.2",
+    "pagedjs": "^0.4.3",
     "pdf-lib": "^1.17.1",
+    "prince": "^1.14.3",
     "puppeteer": "^24.22.0",
     "require-from-web": "^1.2.0",
     "sync-fetch": "^0.6.0-2",
